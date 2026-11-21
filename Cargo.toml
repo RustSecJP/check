@@ -1,0 +1,48 @@
+[package]
+name = "rustsecjp-check"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Check Cargo.lock dependencies against OSV and RustSecJP incident records (Japanese report, GitHub Action)"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/RustSecJP/check"
+readme = "README.md"
+authors = ["RustSecJP contributors"]
+keywords = ["security", "cargo", "osv", "supply-chain", "rustsec"]
+categories = ["command-line-utilities", "development-tools"]
+include = [
+    "/src/**",
+    "/data/**",
+    "/examples/*.rs",
+    "/Cargo.toml",
+    "/Cargo.lock",
+    "/README.md",
+    "/LICENSE-MIT",
+    "/LICENSE-APACHE",
+]
+
+[lib]
+name = "rustsecjp_check"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rustsecjp-check"
+path = "src/main.rs"
+
+[[example]]
+name = "update-popular"
+path = "examples/update_popular.rs"
+
+[dependencies]
+flate2 = "1.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tar = { version = "0.4.46", default-features = false }
+toml = { version = "1.2", default-features = false, features = ["std", "parse", "serde"] }
+ureq = { version = "3.5", default-features = false, features = ["rustls", "gzip"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

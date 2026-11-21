@@ -1,0 +1,29 @@
+# 試験用。実物（RustSecJP/incidents の RSJP-C-2025-001）から一部だけを写しています。
+id = "RSJP-C-2025-001"
+title = "finch を装う crate と、認証情報を盗む sha-* 依存（2025年11月〜12月）"
+summary = """
+試験用の要約。
+"""
+status = "published"
+related = []
+
+[dates]
+discovered = "2025-12-05"
+
+[[members]]
+crate = "sha-rust"
+versions = "8 版（2025-11-20〜2025-11-25 に公開）"
+role = "carrier"
+ids = ["RUSTSEC-2025-0146", "GHSA-3mmg-7c2q-8938"]
+downloads = 153
+
+[[members]]
+crate = "finch-rust"
+versions = "1 版（2025-11-25 に公開）"
+role = "typosquat"
+ids = ["RUSTSEC-2025-0148", "GHSA-f8h5-x737-x4xr"]
+downloads = 28
+
+[[history]]
+date = "2026-11-20"
+change = "初版"

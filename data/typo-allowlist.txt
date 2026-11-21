@@ -1,0 +1,24 @@
+# よく使われる名前に似ているが、正規と見なす crate（左）と、似ている名前（右）。
+# crates.io のダウンロード数で 1001〜5000 位の crate から自動で作りました（2026-11-21 取得）。
+# 手で足してもかまいません。cargo run --example update-popular で作り直すと、手で足した行は消えます。
+dotenv dotenvy
+deflate fdeflate
+sys-info sysinfo
+bitfield bit_field
+unicode-id unicode-xid
+manyhow anyhow
+serde_yml serde_yaml
+aws-sdk-sqs aws-sdk-sts
+notify-rust notify
+ip_network ipnetwork
+winres winreg
+rustfix rustix
+bitcode bincode
+serde-hjson serde_json
+aws-sdk-ssm aws-sdk-sso
+wincode bincode
+shellwords shell-words
+yansi-term ansi_term
+aws-sdk-sns aws-sdk-sts
+marrow arrow
+openssh openssl

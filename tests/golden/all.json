@@ -1,0 +1,383 @@
+{
+  "tool": "rustsecjp-check",
+  "version": "0.1.0",
+  "verdict": "malicious",
+  "verdict_ja": "悪性の crate が見つかりました",
+  "checked_at": "2026-11-21 01:01 UTC",
+  "lockfiles": [
+    "clean/Cargo.lock",
+    "hijacked-bad/Cargo.lock",
+    "hijacked-good/Cargo.lock",
+    "malicious/Cargo.lock",
+    "path-git/Cargo.lock",
+    "typosquat/Cargo.lock"
+  ],
+  "checked_count": 12,
+  "skipped": [
+    {
+      "name": "bio-tool",
+      "version": "0.1.0",
+      "kind": "path",
+      "source": null
+    },
+    {
+      "name": "clean-app",
+      "version": "0.1.0",
+      "kind": "path",
+      "source": null
+    },
+    {
+      "name": "local-helper",
+      "version": "0.0.1",
+      "kind": "path",
+      "source": null
+    },
+    {
+      "name": "private-thing",
+      "version": "1.2.3",
+      "kind": "registry",
+      "source": "sparse+https://registry.example.invalid/index/"
+    },
+    {
+      "name": "tracing-tree",
+      "version": "0.3.0",
+      "kind": "git",
+      "source": "git+https://github.com/example/tracing-tree#841286bfffd3c2200810244506cd127013dbeff9"
+    },
+    {
+      "name": "typo-app",
+      "version": "0.1.0",
+      "kind": "path",
+      "source": null
+    },
+    {
+      "name": "uses-arrayref",
+      "version": "0.1.0",
+      "kind": "path",
+      "source": null
+    },
+    {
+      "name": "workspace-member",
+      "version": "0.2.0",
+      "kind": "path",
+      "source": null
+    }
+  ],
+  "errors": [],
+  "sources": [
+    "RustSecJP/incidents",
+    "OSV (api.osv.dev)"
+  ],
+  "findings": {
+    "malicious": [
+      {
+        "section": "malicious",
+        "crate": "arrayref",
+        "version": "0.3.10",
+        "ids": [
+          "RUSTSEC-2026-0260",
+          "MAL-2026-14336"
+        ],
+        "summary": "`arrayref` 0.3.10 was removed from crates.io due to a malicious dependency",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RUSTSEC-2026-0260",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2026-0260.html"
+          },
+          {
+            "label": "RSJP-C-2026-004",
+            "url": "https://rustsecjp.github.io/incidents/campaigns/RSJP-C-2026-004/"
+          }
+        ],
+        "lockfiles": [
+          "hijacked-bad/Cargo.lock"
+        ],
+        "level": null,
+        "severity": null,
+        "informational": null
+      },
+      {
+        "section": "malicious",
+        "crate": "finch-rust",
+        "version": "0.1.0",
+        "ids": [
+          "RUSTSEC-2025-0148",
+          "GHSA-f8h5-x737-x4xr"
+        ],
+        "summary": "`finch-rust` was removed from crates.io for malicious code",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RUSTSEC-2025-0148",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2025-0148.html"
+          },
+          {
+            "label": "RUSTSEC-2025-0148 日本語版",
+            "url": "https://rustsecjp.github.io/incidents/advisories/RUSTSEC-2025-0148.html"
+          },
+          {
+            "label": "RSJP-C-2025-001",
+            "url": "https://rustsecjp.github.io/incidents/campaigns/RSJP-C-2025-001/"
+          }
+        ],
+        "lockfiles": [
+          "malicious/Cargo.lock"
+        ],
+        "level": null,
+        "severity": "CRITICAL",
+        "informational": null
+      },
+      {
+        "section": "malicious",
+        "crate": "sha-rust",
+        "version": "0.1.8",
+        "ids": [
+          "RUSTSEC-2025-0146",
+          "GHSA-3mmg-7c2q-8938"
+        ],
+        "summary": "`sha-rust` was removed from crates.io for malicious code",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RUSTSEC-2025-0146",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2025-0146.html"
+          },
+          {
+            "label": "RSJP-C-2025-001",
+            "url": "https://rustsecjp.github.io/incidents/campaigns/RSJP-C-2025-001/"
+          }
+        ],
+        "lockfiles": [
+          "malicious/Cargo.lock"
+        ],
+        "level": null,
+        "severity": null,
+        "informational": null
+      }
+    ],
+    "vulnerability": [
+      {
+        "section": "vulnerability",
+        "crate": "time",
+        "version": "0.1.45",
+        "ids": [
+          "RUSTSEC-2020-0071",
+          "GHSA-wcg3-cvx6-7396",
+          "CVE-2020-26235"
+        ],
+        "summary": "Potential segfault in the time crate",
+        "fixed": [
+          "0.2.0",
+          "0.2.1",
+          "0.2.23"
+        ],
+        "links": [
+          {
+            "label": "RUSTSEC-2020-0071",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2020-0071.html"
+          }
+        ],
+        "lockfiles": [
+          "malicious/Cargo.lock"
+        ],
+        "level": null,
+        "severity": "MODERATE",
+        "informational": null
+      }
+    ],
+    "info": [
+      {
+        "section": "info",
+        "crate": "atty",
+        "version": "0.2.14",
+        "ids": [
+          "RUSTSEC-2021-0145",
+          "GHSA-g98v-hv3f-hcfr"
+        ],
+        "summary": "Potential unaligned read",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RUSTSEC-2021-0145",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2021-0145.html"
+          }
+        ],
+        "lockfiles": [
+          "malicious/Cargo.lock"
+        ],
+        "level": null,
+        "severity": null,
+        "informational": "unsound"
+      },
+      {
+        "section": "info",
+        "crate": "atty",
+        "version": "0.2.14",
+        "ids": [
+          "RUSTSEC-2024-0375"
+        ],
+        "summary": "`atty` is unmaintained",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RUSTSEC-2024-0375",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2024-0375.html"
+          }
+        ],
+        "lockfiles": [
+          "malicious/Cargo.lock"
+        ],
+        "level": null,
+        "severity": null,
+        "informational": "unmaintained"
+      }
+    ],
+    "typo": [
+      {
+        "section": "typo",
+        "crate": "reqwets",
+        "version": "0.12.0",
+        "ids": [],
+        "summary": "よく使われる `reqwest` に似ています（隣り合う 2 文字の入れ替え）",
+        "fixed": [],
+        "links": [
+          {
+            "label": "reqwest",
+            "url": "https://crates.io/crates/reqwest"
+          }
+        ],
+        "lockfiles": [
+          "typosquat/Cargo.lock"
+        ],
+        "level": null,
+        "severity": null,
+        "informational": null
+      },
+      {
+        "section": "typo",
+        "crate": "tokio-rs",
+        "version": "1.0.0",
+        "ids": [],
+        "summary": "よく使われる `tokio` に似ています（よく使われる名前に「-rs」を付けた形）",
+        "fixed": [],
+        "links": [
+          {
+            "label": "tokio",
+            "url": "https://crates.io/crates/tokio"
+          }
+        ],
+        "lockfiles": [
+          "typosquat/Cargo.lock"
+        ],
+        "level": null,
+        "severity": null,
+        "informational": null
+      }
+    ],
+    "campaign": [
+      {
+        "section": "campaign",
+        "crate": "append-only-vec",
+        "version": "0.1.9",
+        "ids": [
+          "RSJP-C-2026-004",
+          "RUSTSEC-2026-0262",
+          "GHSA-m9v3-f7h2-72cp",
+          "MAL-2026-14333"
+        ],
+        "summary": "【要確認】乗っ取られた正規の crateで、記録には「0.1.9（2026-08-20 公開のもの）」とあります。同じ版番号でも問題ない場合があるので、確かめてください。arrayref など 3 つの正規 crate の乗っ取りと、proc-macro2 を装う proc-macro1（2026年8月）",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RSJP-C-2026-004",
+            "url": "https://rustsecjp.github.io/incidents/campaigns/RSJP-C-2026-004/"
+          }
+        ],
+        "lockfiles": [
+          "hijacked-bad/Cargo.lock"
+        ],
+        "level": "要確認",
+        "severity": null,
+        "informational": null
+      },
+      {
+        "section": "campaign",
+        "crate": "arrayref",
+        "version": "0.3.10",
+        "ids": [
+          "RSJP-C-2026-004",
+          "RUSTSEC-2026-0260",
+          "GHSA-jwh4-228v-r358",
+          "MAL-2026-14336"
+        ],
+        "summary": "【悪性】乗っ取られた正規の crateで、記録にある悪性の版です。arrayref など 3 つの正規 crate の乗っ取りと、proc-macro2 を装う proc-macro1（2026年8月）",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RSJP-C-2026-004",
+            "url": "https://rustsecjp.github.io/incidents/campaigns/RSJP-C-2026-004/"
+          }
+        ],
+        "lockfiles": [
+          "hijacked-bad/Cargo.lock"
+        ],
+        "level": "悪性",
+        "severity": null,
+        "informational": null
+      },
+      {
+        "section": "campaign",
+        "crate": "finch-rust",
+        "version": "0.1.0",
+        "ids": [
+          "RSJP-C-2025-001",
+          "RUSTSEC-2025-0148",
+          "GHSA-f8h5-x737-x4xr"
+        ],
+        "summary": "【悪性】名前を似せた偽物。finch を装う crate と、認証情報を盗む sha-* 依存（2025年11月〜12月）",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RSJP-C-2025-001",
+            "url": "https://rustsecjp.github.io/incidents/campaigns/RSJP-C-2025-001/"
+          },
+          {
+            "label": "RUSTSEC-2025-0148 日本語版",
+            "url": "https://rustsecjp.github.io/incidents/advisories/RUSTSEC-2025-0148.html"
+          }
+        ],
+        "lockfiles": [
+          "malicious/Cargo.lock"
+        ],
+        "level": "悪性",
+        "severity": null,
+        "informational": null
+      },
+      {
+        "section": "campaign",
+        "crate": "sha-rust",
+        "version": "0.1.8",
+        "ids": [
+          "RSJP-C-2025-001",
+          "RUSTSEC-2025-0146",
+          "GHSA-3mmg-7c2q-8938"
+        ],
+        "summary": "【悪性】悪性のコードを運ぶ crate。finch を装う crate と、認証情報を盗む sha-* 依存（2025年11月〜12月）",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RSJP-C-2025-001",
+            "url": "https://rustsecjp.github.io/incidents/campaigns/RSJP-C-2025-001/"
+          }
+        ],
+        "lockfiles": [
+          "malicious/Cargo.lock"
+        ],
+        "level": "悪性",
+        "severity": null,
+        "informational": null
+      }
+    ]
+  }
+}

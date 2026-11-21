@@ -1,0 +1,48 @@
+//! もとの Python 版（v0.1.0）が同じ偽の応答で出した報告（tests/golden/）と、1 文字ずつ同じかを確かめます。
+//!
+//! 確認した時刻だけは、比べる前に消します。
+
+mod common;
+
+use common::*;
+use serde_json::Value;
+
+fn golden_dir() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("golden")
+}
+
+/// 確認した時刻を消します。
+fn strip_time(s: &str) -> String {
+    let mut out = s.to_string();
+    for (key, end) in [("確認した時刻: ", " ／"), ("\"checked_at\": \"", "\"")] {
+        if let Some(i) = out.find(key) {
+            let start = i + key.len();
+            if let Some(j) = out[start..].find(end) {
+                out.replace_range(start..start + j, "<time>");
+            }
+        }
+    }
+    out
+}
+
+#[test]
+fn same_output_as_python() {
+    let cases: Value =
+        serde_json::from_str(&std::fs::read_to_string(golden_dir().join("cases.json")).unwrap()).unwrap();
+    let mut n = 0;
+    for (fname, case) in cases.as_object().unwrap() {
+        let args: Vec<&str> = case["args"].as_array().unwrap().iter().map(|a| a.as_str().unwrap()).collect();
+        let fake: Vec<&str> = case["fake"].as_array().unwrap().iter().map(|a| a.as_str().unwrap()).collect();
+        let f = FakeFetch {
+            fail_osv: fake.contains(&"fail_osv"),
+            tarball: fake.contains(&"tarball").then(default_tarball),
+            ..Default::default()
+        };
+        let (code, out) = run_cli(&args, &f, Some(&locks()));
+        let want = std::fs::read_to_string(golden_dir().join(fname)).unwrap();
+        assert_eq!(strip_time(&out), strip_time(&want), "{fname}");
+        assert_eq!(i64::from(code), case["code"].as_i64().unwrap(), "{fname}");
+        n += 1;
+    }
+    assert!(n >= 10);
+}

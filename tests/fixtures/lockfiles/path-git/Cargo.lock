@@ -1,0 +1,23 @@
+version = 4
+
+[[package]]
+name = "workspace-member"
+version = "0.2.0"
+dependencies = [
+ "local-helper",
+ "tracing-tree",
+]
+
+[[package]]
+name = "local-helper"
+version = "0.0.1"
+
+[[package]]
+name = "tracing-tree"
+version = "0.3.0"
+source = "git+https://github.com/example/tracing-tree#841286bfffd3c2200810244506cd127013dbeff9"
+
+[[package]]
+name = "private-thing"
+version = "1.2.3"
+source = "sparse+https://registry.example.invalid/index/"

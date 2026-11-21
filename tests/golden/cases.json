@@ -1,0 +1,118 @@
+{
+ "all.md": {
+  "args": [
+   "--incidents-dir",
+   "../incidents",
+   "--fail-on",
+   "never"
+  ],
+  "code": 0,
+  "fake": []
+ },
+ "all.json": {
+  "args": [
+   "--incidents-dir",
+   "../incidents",
+   "--format",
+   "json",
+   "--fail-on",
+   "never"
+  ],
+  "code": 0,
+  "fake": []
+ },
+ "osv-fail.md": {
+  "args": [
+   "--lockfile",
+   "clean/Cargo.lock",
+   "--incidents-dir",
+   "../incidents"
+  ],
+  "code": 2,
+  "fake": [
+   "fail_osv"
+  ]
+ },
+ "tarball.md": {
+  "args": [
+   "--lockfile",
+   "hijacked-bad/Cargo.lock"
+  ],
+  "code": 1,
+  "fake": [
+   "tarball"
+  ]
+ },
+ "no-typo-glob.json": {
+  "args": [
+   "--lockfile",
+   "*/Cargo.lock",
+   "--no-typo",
+   "--no-incidents",
+   "--format",
+   "json"
+  ],
+  "code": 1,
+  "fake": []
+ },
+ "clean.md": {
+  "args": [
+   "--lockfile",
+   "clean/Cargo.lock",
+   "--incidents-dir",
+   "../incidents"
+  ],
+  "code": 0,
+  "fake": []
+ },
+ "hijacked-bad.md": {
+  "args": [
+   "--lockfile",
+   "hijacked-bad/Cargo.lock",
+   "--incidents-dir",
+   "../incidents"
+  ],
+  "code": 1,
+  "fake": []
+ },
+ "hijacked-good.md": {
+  "args": [
+   "--lockfile",
+   "hijacked-good/Cargo.lock",
+   "--incidents-dir",
+   "../incidents"
+  ],
+  "code": 0,
+  "fake": []
+ },
+ "malicious.md": {
+  "args": [
+   "--lockfile",
+   "malicious/Cargo.lock",
+   "--incidents-dir",
+   "../incidents"
+  ],
+  "code": 1,
+  "fake": []
+ },
+ "path-git.md": {
+  "args": [
+   "--lockfile",
+   "path-git/Cargo.lock",
+   "--incidents-dir",
+   "../incidents"
+  ],
+  "code": 0,
+  "fake": []
+ },
+ "typosquat.md": {
+  "args": [
+   "--lockfile",
+   "typosquat/Cargo.lock",
+   "--incidents-dir",
+   "../incidents"
+  ],
+  "code": 0,
+  "fake": []
+ }
+}

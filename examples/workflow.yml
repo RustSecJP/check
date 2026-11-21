@@ -1,0 +1,48 @@
+# RustSecJP check の例。.github/workflows/rustsecjp-check.yml にコピーして使います。
+#
+# - プルリクエストで Cargo.lock か Cargo.toml が変わったときに確かめます。
+# - プルリクエストに「@rustsecjp-bot check」とコメントすると、もう一度確かめます。
+#   コメントした人が OWNER / MEMBER / COLLABORATOR のときだけ動きます。
+#
+# どちらの場合も、プルリクエストのコードは取り出しません（actions/checkout を使いません）。
+# Cargo.lock は GitHub の API でデータとして読むだけなので、フォークからの
+# プルリクエストでも、フォークのコード（build.rs など）が動くことはありません。
+#
+# action は、RustSecJP/check の Release にあるバイナリを取ってきて、SHA256SUMS と照らし合わせてから動かします。
+name: RustSecJP check
+
+on:
+  pull_request:
+    paths:
+      - "**/Cargo.lock"
+      - "**/Cargo.toml"
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read        # Cargo.lock を API で読むため
+  pull-requests: write  # 結果をコメントするため
+  issues: write         # コメントへの反応（👀 など）のため
+
+jobs:
+  check:
+    # issue_comment は、プルリクエストへのコメントで、コマンドを含み、
+    # 書いた人に権限があるときだけ動かします（action の中でも同じことを確かめます）。
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event.issue.pull_request &&
+       contains(github.event.comment.body, '@rustsecjp-bot check') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # ジョブの単位で並びを決めます（関係の無いコメントで、動いている確認が止まらないように）
+    concurrency:
+      group: rustsecjp-check-${{ github.event.pull_request.number || github.event.issue.number }}
+      cancel-in-progress: true
+    steps:
+      - uses: RustSecJP/check@v0
+        with:
+          fail-on: malicious
+          # RustSecJP のリポジトリでは、rustsecjp-bot の名前でコメントするために
+          # bot のトークンを渡します。ほかのリポジトリでは省略してかまいません。
+          # token: ${{ secrets.RUSTSECJP_BOT_TOKEN }}

@@ -1,0 +1,222 @@
+{
+  "tool": "rustsecjp-check",
+  "version": "0.1.0",
+  "verdict": "malicious",
+  "verdict_ja": "悪性の crate が見つかりました",
+  "checked_at": "2026-11-21 01:01 UTC",
+  "lockfiles": [
+    "clean/Cargo.lock",
+    "hijacked-bad/Cargo.lock",
+    "hijacked-good/Cargo.lock",
+    "malicious/Cargo.lock",
+    "path-git/Cargo.lock",
+    "typosquat/Cargo.lock"
+  ],
+  "checked_count": 12,
+  "skipped": [
+    {
+      "name": "bio-tool",
+      "version": "0.1.0",
+      "kind": "path",
+      "source": null
+    },
+    {
+      "name": "clean-app",
+      "version": "0.1.0",
+      "kind": "path",
+      "source": null
+    },
+    {
+      "name": "local-helper",
+      "version": "0.0.1",
+      "kind": "path",
+      "source": null
+    },
+    {
+      "name": "private-thing",
+      "version": "1.2.3",
+      "kind": "registry",
+      "source": "sparse+https://registry.example.invalid/index/"
+    },
+    {
+      "name": "tracing-tree",
+      "version": "0.3.0",
+      "kind": "git",
+      "source": "git+https://github.com/example/tracing-tree#841286bfffd3c2200810244506cd127013dbeff9"
+    },
+    {
+      "name": "typo-app",
+      "version": "0.1.0",
+      "kind": "path",
+      "source": null
+    },
+    {
+      "name": "uses-arrayref",
+      "version": "0.1.0",
+      "kind": "path",
+      "source": null
+    },
+    {
+      "name": "workspace-member",
+      "version": "0.2.0",
+      "kind": "path",
+      "source": null
+    }
+  ],
+  "errors": [],
+  "sources": [
+    "OSV (api.osv.dev)"
+  ],
+  "findings": {
+    "malicious": [
+      {
+        "section": "malicious",
+        "crate": "arrayref",
+        "version": "0.3.10",
+        "ids": [
+          "RUSTSEC-2026-0260",
+          "MAL-2026-14336"
+        ],
+        "summary": "`arrayref` 0.3.10 was removed from crates.io due to a malicious dependency",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RUSTSEC-2026-0260",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2026-0260.html"
+          }
+        ],
+        "lockfiles": [
+          "hijacked-bad/Cargo.lock"
+        ],
+        "level": null,
+        "severity": null,
+        "informational": null
+      },
+      {
+        "section": "malicious",
+        "crate": "finch-rust",
+        "version": "0.1.0",
+        "ids": [
+          "RUSTSEC-2025-0148",
+          "GHSA-f8h5-x737-x4xr"
+        ],
+        "summary": "`finch-rust` was removed from crates.io for malicious code",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RUSTSEC-2025-0148",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2025-0148.html"
+          }
+        ],
+        "lockfiles": [
+          "malicious/Cargo.lock"
+        ],
+        "level": null,
+        "severity": "CRITICAL",
+        "informational": null
+      },
+      {
+        "section": "malicious",
+        "crate": "sha-rust",
+        "version": "0.1.8",
+        "ids": [
+          "RUSTSEC-2025-0146",
+          "GHSA-3mmg-7c2q-8938"
+        ],
+        "summary": "`sha-rust` was removed from crates.io for malicious code",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RUSTSEC-2025-0146",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2025-0146.html"
+          }
+        ],
+        "lockfiles": [
+          "malicious/Cargo.lock"
+        ],
+        "level": null,
+        "severity": null,
+        "informational": null
+      }
+    ],
+    "vulnerability": [
+      {
+        "section": "vulnerability",
+        "crate": "time",
+        "version": "0.1.45",
+        "ids": [
+          "RUSTSEC-2020-0071",
+          "GHSA-wcg3-cvx6-7396",
+          "CVE-2020-26235"
+        ],
+        "summary": "Potential segfault in the time crate",
+        "fixed": [
+          "0.2.0",
+          "0.2.1",
+          "0.2.23"
+        ],
+        "links": [
+          {
+            "label": "RUSTSEC-2020-0071",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2020-0071.html"
+          }
+        ],
+        "lockfiles": [
+          "malicious/Cargo.lock"
+        ],
+        "level": null,
+        "severity": "MODERATE",
+        "informational": null
+      }
+    ],
+    "info": [
+      {
+        "section": "info",
+        "crate": "atty",
+        "version": "0.2.14",
+        "ids": [
+          "RUSTSEC-2021-0145",
+          "GHSA-g98v-hv3f-hcfr"
+        ],
+        "summary": "Potential unaligned read",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RUSTSEC-2021-0145",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2021-0145.html"
+          }
+        ],
+        "lockfiles": [
+          "malicious/Cargo.lock"
+        ],
+        "level": null,
+        "severity": null,
+        "informational": "unsound"
+      },
+      {
+        "section": "info",
+        "crate": "atty",
+        "version": "0.2.14",
+        "ids": [
+          "RUSTSEC-2024-0375"
+        ],
+        "summary": "`atty` is unmaintained",
+        "fixed": [],
+        "links": [
+          {
+            "label": "RUSTSEC-2024-0375",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2024-0375.html"
+          }
+        ],
+        "lockfiles": [
+          "malicious/Cargo.lock"
+        ],
+        "level": null,
+        "severity": null,
+        "informational": "unmaintained"
+      }
+    ],
+    "typo": [],
+    "campaign": []
+  }
+}

@@ -1,0 +1,181 @@
+name: RustSecJP check
+description: Cargo.lock の依存を、OSV と RustSecJP の記録で確かめ、結果をプルリクエストにコメントします。
+author: RustSecJP contributors
+branding:
+  icon: shield
+  color: orange
+
+inputs:
+  lockfiles:
+    description: >-
+      確かめる Cargo.lock（パスかグロブ。空白や改行で区切って複数指定できます）。
+      空なら作業ディレクトリの下をすべて探します（target/ は除きます）。
+      プルリクエストを API で読むとき（source が api のとき）は使いません。
+    required: false
+    default: ""
+  fail-on:
+    description: どの結果でジョブを失敗にするか（malicious / vulnerability / never）
+    required: false
+    default: malicious
+  comment:
+    description: プルリクエストのときに結果をコメントするか（true / false）
+    required: false
+    default: "true"
+  token:
+    description: >-
+      コメントと API に使うトークン。RustSecJP のリポジトリでは rustsecjp-bot のトークンを渡します。
+    required: false
+    default: ${{ github.token }}
+  source:
+    description: >-
+      Cargo.lock の読み方。auto（プルリクエストなら API、それ以外は作業ディレクトリ）/ api / workspace
+    required: false
+    default: auto
+  working-directory:
+    description: source が workspace のときに探し始めるディレクトリ
+    required: false
+    default: "."
+  incidents-dir:
+    description: RustSecJP/incidents の手元のコピー（試験用。空なら GitHub から取ってきます）
+    required: false
+    default: ""
+
+outputs:
+  result:
+    description: ok / fail / error / skipped
+    value: ${{ steps.check.outputs.result }}
+  report:
+    description: Markdown の報告のファイルのパス
+    value: ${{ steps.check.outputs.report }}
+
+runs:
+  using: composite
+  steps:
+    # バイナリを用意します。
+    # 1. この action の ref（例 v0.1.0）と同じ名前の Release から、runner に合うものを取ってきます。
+    #    v0 や v0.1 のような ref なら、それに当たる一番新しい Release を使います。
+    #    見つからなければ、一番新しい Release を使います。
+    #    コミットの SHA で固定しているときは、その SHA を指すタグの Release だけを使います
+    #    （別の版のバイナリが動くことがないように）。
+    # 2. SHA256SUMS と照らし合わせます。合わなければ、そこで止めます。
+    # 3. Release が無い（ブランチや uses: ./ から動かしている）ときや、バイナリが動かないときは、
+    #    この action のソースから cargo install でビルドします。
+    #    確かめるリポジトリのコードは取り出しませんし、ビルドもしません。
+    - id: install
+      shell: bash
+      env:
+        ACTION_REF: ${{ github.action_ref }}
+        ACTION_REPO: ${{ github.action_repository }}
+        ACTION_PATH: ${{ github.action_path }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+
+        ref="$ACTION_REF"
+        repo="$ACTION_REPO"
+        path="${ACTION_PATH//\\//}"
+        # 入れ子の composite などで値が空のときは、action のパス（.../_actions/<owner>/<repo>/<ref>）から読みます
+        if [[ -z "$ref" && "$path" =~ /_actions/([^/]+)/([^/]+)/([^/]+)$ ]]; then
+          repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+          ref="${BASH_REMATCH[3]}"
+        fi
+        if [[ -n "$repo" && ! "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+          echo "::error::おかしなリポジトリ名: $repo"
+          exit 1
+        fi
+
+        exe=""
+        case "$RUNNER_OS/$RUNNER_ARCH" in
+          Linux/X64) target=x86_64-unknown-linux-gnu; ext=tar.gz ;;
+          Linux/ARM64) target=aarch64-unknown-linux-gnu; ext=tar.gz ;;
+          macOS/X64) target=x86_64-apple-darwin; ext=tar.gz ;;
+          macOS/ARM64) target=aarch64-apple-darwin; ext=tar.gz ;;
+          Windows/X64) target=x86_64-pc-windows-msvc; ext=zip; exe=.exe ;;
+          *) target=""; ext="" ;;
+        esac
+
+        dir="$RUNNER_TEMP/rustsecjp-check-bin"
+        rm -rf "$dir"
+        mkdir -p "$dir"
+
+        sha256() {
+          if command -v sha256sum > /dev/null; then sha256sum "$1" | cut -d ' ' -f 1
+          else shasum -a 256 "$1" | cut -d ' ' -f 1; fi
+        }
+        fetch() {
+          curl -fsSL --proto '=https' --tlsv1.2 --retry 3 --retry-delay 2 -o "$2" "$1"
+        }
+
+        # どの Release を試すか
+        bases=()
+        if [[ -n "$ref" && -n "$repo" && -n "$target" ]]; then
+          if [[ "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+            tag=""
+            if command -v gh > /dev/null; then
+              tag=$(gh api "repos/$repo/tags?per_page=100" --jq "[.[] | select(.commit.sha == \"$ref\") | .name][0] // empty" 2> /dev/null || true)
+            fi
+            [[ -n "$tag" ]] && bases+=("https://github.com/$repo/releases/download/$tag")
+          else
+            bases+=("https://github.com/$repo/releases/download/$ref")
+            if [[ "$ref" =~ ^v[0-9]+(\.[0-9]+)?$ ]] && command -v gh > /dev/null; then
+              tag=$(gh api "repos/$repo/releases?per_page=100" \
+                --jq "[.[] | select((.draft or .prerelease) | not) | .tag_name | select(startswith(\"$ref.\"))][0] // empty" \
+                2> /dev/null || true)
+              [[ -n "$tag" ]] && bases+=("https://github.com/$repo/releases/download/$tag")
+            fi
+            bases+=("https://github.com/$repo/releases/latest/download")
+          fi
+        fi
+
+        asset="rustsecjp-check-$target.$ext"
+        bin=""
+        for base in ${bases[@]+"${bases[@]}"}; do
+          if fetch "$base/$asset" "$dir/$asset" && fetch "$base/SHA256SUMS" "$dir/SHA256SUMS"; then
+            expected=$(awk -v f="$asset" '$2 == f || $2 == "*" f { print $1; exit }' "$dir/SHA256SUMS")
+            actual=$(sha256 "$dir/$asset")
+            if [[ -z "$expected" || "$expected" != "$actual" ]]; then
+              echo "::error::$base/$asset が SHA256SUMS と合いません（期待: ${expected:-なし}、実際: $actual）"
+              exit 1
+            fi
+            if [[ "$ext" == zip ]]; then
+              7z x -y -o"$(cygpath -w "$dir/x")" "$(cygpath -w "$dir/$asset")" > /dev/null
+            else
+              mkdir -p "$dir/x"
+              tar -xzf "$dir/$asset" -C "$dir/x"
+            fi
+            if "$dir/x/rustsecjp-check$exe" --version; then
+              bin="$dir/x/rustsecjp-check$exe"
+              echo "Release のバイナリを使います: $base/$asset"
+            else
+              echo "::warning::Release のバイナリが動きませんでした。ソースからビルドします"
+            fi
+            break
+          fi
+        done
+
+        if [[ -z "$bin" ]]; then
+          if ! command -v cargo > /dev/null; then
+            echo "::error::使える Release のバイナリが無く、ソースからビルドするための cargo もありません"
+            exit 1
+          fi
+          echo "ソースからビルドします（$ACTION_PATH）"
+          # action のディレクトリで動かし、確かめるリポジトリの .cargo/config.toml や rust-toolchain.toml を読まないようにします
+          (cd "$ACTION_PATH" && cargo install --locked --quiet --path . --root "$dir/cargo")
+          bin="$dir/cargo/bin/rustsecjp-check$exe"
+          "$bin" --version
+        fi
+        echo "bin=$bin" >> "$GITHUB_OUTPUT"
+
+    - id: check
+      shell: bash
+      env:
+        INPUT_LOCKFILES: ${{ inputs.lockfiles }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_COMMENT: ${{ inputs.comment }}
+        INPUT_TOKEN: ${{ inputs.token }}
+        INPUT_SOURCE: ${{ inputs.source }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_INCIDENTS_DIR: ${{ inputs.incidents-dir }}
+        RUSTSECJP_CHECK_BIN: ${{ steps.install.outputs.bin }}
+      run: |
+        "$RUSTSECJP_CHECK_BIN" action

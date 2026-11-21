@@ -1,0 +1,52 @@
+# cargo-deny の設定（https://embarkstudios.github.io/cargo-deny/）
+# CI で `cargo deny check` を動かします。
+
+[graph]
+# 配る 5 つの target で使う依存だけを見ます
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+]
+all-features = false
+
+[advisories]
+version = 2
+# RustSec の助言（脆弱性・保守終了・unsound・取り下げられた版）はすべて失敗にします
+yanked = "deny"
+unmaintained = "all"
+unsound = "all"
+ignore = []
+
+[licenses]
+version = 2
+confidence-threshold = 0.93
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "0BSD",
+    "CDLA-Permissive-2.0", # webpki-roots（Mozilla のルート証明書の一覧）
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+highlight = "all"
+# 非同期のランタイムや OpenSSL は使いません
+deny = [
+    { crate = "openssl-sys" },
+    { crate = "native-tls" },
+    { crate = "tokio" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

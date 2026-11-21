@@ -1,0 +1,117 @@
+# v* のタグを push すると、5 つの target のバイナリを作り、GitHub Release に載せます。
+# 使うのは GitHub の runner と GITHUB_TOKEN だけです（ほかのサービスや secrets は使いません）。
+#
+# 載せるもの:
+#   rustsecjp-check-<target>.tar.gz（Windows は .zip）… バイナリ、README.md、LICENSE-*
+#   SHA256SUMS                                      … すべての sha256（action.yml が確かめます）
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: build (${{ matrix.target }})
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          # Linux は古めの glibc（Ubuntu 22.04 の 2.35）でビルドして、動く範囲を広げます
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-22.04 }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-22.04-arm }
+          # x86_64 の macOS は、arm64 の runner からクロスビルドします
+          - { target: x86_64-apple-darwin, os: macos-latest }
+          - { target: aarch64-apple-darwin, os: macos-latest }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: The tag must match the version in Cargo.toml
+        shell: bash
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::タグ $GITHUB_REF_NAME と Cargo.toml の版 $version が違います"
+            exit 1
+          fi
+
+      - name: Install Rust
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal --target "${{ matrix.target }}"
+          rustup default stable
+
+      - name: Build
+        shell: bash
+        run: cargo build --release --locked --target "${{ matrix.target }}"
+
+      - name: Smoke test
+        if: matrix.target != 'x86_64-apple-darwin'
+        shell: bash
+        run: |
+          "target/${{ matrix.target }}/release/rustsecjp-check" --version
+          "target/${{ matrix.target }}/release/rustsecjp-check" --no-osv --no-incidents \
+            --lockfile tests/fixtures/lockfiles/typosquat/Cargo.lock --fail-on never > /dev/null
+
+      - name: Package
+        shell: bash
+        run: |
+          name="rustsecjp-check-${{ matrix.target }}"
+          mkdir -p dist stage
+          cp README.md LICENSE-MIT LICENSE-APACHE stage/
+          if [ "$RUNNER_OS" = Windows ]; then
+            cp "target/${{ matrix.target }}/release/rustsecjp-check.exe" stage/
+            (cd stage && 7z a -tzip "../dist/$name.zip" rustsecjp-check.exe README.md LICENSE-MIT LICENSE-APACHE)
+          else
+            cp "target/${{ matrix.target }}/release/rustsecjp-check" stage/
+            tar -C stage -czf "dist/$name.tar.gz" rustsecjp-check README.md LICENSE-MIT LICENSE-APACHE
+          fi
+          ls -l dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Release を作るため
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          pattern: dist-*
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: dist
+        run: |
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            flags=()
+            case "$TAG" in *-*) flags+=(--prerelease) ;; esac
+            gh release create "$TAG" dist/* --verify-tag --title "$TAG" --generate-notes "${flags[@]}"
+          fi

@@ -1,0 +1,2 @@
+# 試験の期待する出力（tests/golden）などを、どの OS でも LF のまま扱います
+* text=auto eol=lf

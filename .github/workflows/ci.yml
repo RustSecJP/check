@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install stable --profile minimal --component rustfmt && rustup default stable
+      - run: cargo fmt --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install stable --profile minimal --component clippy && rustup default stable
+      - run: cargo clippy --locked --all-targets -- -D warnings
+
+  test:
+    name: test (${{ matrix.os }}, ${{ matrix.toolchain }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, toolchain: stable }
+          - { os: ubuntu-latest, toolchain: msrv }
+          - { os: macos-latest, toolchain: stable }
+          - { os: windows-latest, toolchain: stable }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        shell: bash
+        run: |
+          toolchain="${{ matrix.toolchain }}"
+          if [ "$toolchain" = msrv ]; then
+            # Cargo.toml の rust-version を使います
+            toolchain=$(sed -n 's/^rust-version = "\(.*\)"$/\1/p' Cargo.toml)
+          fi
+          rustup toolchain install "$toolchain" --profile minimal
+          rustup default "$toolchain"
+          rustc --version
+      # 試験はネットワークを使いません（OSV と GitHub は偽物の応答で試します）
+      - run: cargo test --locked
+
+  deny:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_DENY_VERSION: 0.20.2
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cargo-deny
+          key: cargo-deny-${{ env.CARGO_DENY_VERSION }}-${{ runner.os }}
+      - name: Install cargo-deny
+        run: |
+          if [ ! -x "$HOME/.cargo-deny/bin/cargo-deny" ]; then
+            cargo install --locked --root "$HOME/.cargo-deny" "cargo-deny@$CARGO_DENY_VERSION"
+          fi
+          echo "$HOME/.cargo-deny/bin" >> "$GITHUB_PATH"
+      - run: cargo deny check
+
+  dogfood:
+    # 自分の Cargo.lock を、自分で確かめます
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: cargo build --release --locked
+      - name: Check our own Cargo.lock
+        run: |
+          set +e
+          ./target/release/rustsecjp-check --lockfile Cargo.lock --fail-on malicious --output report.md
+          code=$?
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+          exit $code
+
+  action-dry-run:
+    # action.yml を、このリポジトリのコードで動かします（uses: ./ ではソースからビルドします）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Run the action against the fixtures (no comment)
+        id: dry
+        uses: ./
+        with:
+          source: workspace
+          working-directory: tests/fixtures/lockfiles
+          incidents-dir: tests/fixtures/incidents
+          comment: "false"
+          fail-on: never
+      - name: The fixtures must be reported as malicious
+        env:
+          RESULT: ${{ steps.dry.outputs.result }}
+          REPORT: ${{ steps.dry.outputs.report }}
+        run: |
+          test "$RESULT" = ok
+          grep -q '<!-- rustsecjp-check -->' "$REPORT"
+          grep -q '悪性の crate が見つかりました' "$REPORT"

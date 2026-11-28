@@ -190,3 +190,7 @@ MIT または Apache-2.0 のどちらかを選べます（[LICENSE-MIT](LICENSE-
 Copyright (c) 2026 RustSecJP contributors
 
 誤りや改善の提案は、[issues](https://github.com/RustSecJP/check/issues) へお願いします。
+
+## 作者
+
+Kurashina Hinata · [ポートフォリオ](https://hina-kura49.github.io/portfolio/) · [GitHub](https://github.com/hina-kura49) · [X](https://x.com/hkurashina49) · [Instagram](https://www.instagram.com/hina_kura49/) · [Facebook](https://www.facebook.com/profile.php?id=61597175063829)

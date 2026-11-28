@@ -205,3 +205,7 @@ Licensed under either of the MIT License ([LICENSE-MIT](LICENSE-MIT)) or the Apa
 Copyright (c) 2026 RustSecJP contributors
 
 Bug reports and ideas are welcome in [issues](https://github.com/RustSecJP/check/issues).
+
+## Author
+
+Made by Kurashina Hinata · [Portfolio](https://hina-kura49.github.io/portfolio/) · [GitHub](https://github.com/hina-kura49) · [X](https://x.com/hkurashina49) · [Instagram](https://www.instagram.com/hina_kura49/) · [Facebook](https://www.facebook.com/profile.php?id=61597175063829)

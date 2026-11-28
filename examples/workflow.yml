@@ -40,7 +40,7 @@ jobs:
       group: rustsecjp-check-${{ github.event.pull_request.number || github.event.issue.number }}
       cancel-in-progress: true
     steps:
-      - uses: RustSecJP/check@v0
+      - uses: RustSecJP/check@v1
         with:
           fail-on: malicious
           # RustSecJP のリポジトリでは、rustsecjp-bot の名前でコメントするために

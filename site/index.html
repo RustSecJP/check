@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RustSecJP check — catch malicious and vulnerable crates in pull requests</title>
+  <meta name="description" content="RustSecJP check is a free GitHub Action and CLI that reads Cargo.lock and flags malicious crates, known vulnerabilities and look-alike names in a pull request comment. Nothing from your project is built or run.">
+  <link rel="canonical" href="https://rustsecjp.github.io/check/">
+  <meta name="theme-color" content="#cf222e">
+  <link rel="icon" href="assets/rustsecjp.png" type="image/png">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="RustSecJP check">
+  <meta property="og:title" content="RustSecJP check — catch bad crates before you merge">
+  <meta property="og:description" content="A GitHub Action that reads Cargo.lock and comments on pull requests about malicious crates, known vulnerabilities and look-alike names. Nothing is built or run.">
+  <meta property="og:url" content="https://rustsecjp.github.io/check/">
+  <meta property="og:image" content="https://rustsecjp.github.io/check/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="RustSecJP check — flags malicious, vulnerable and look-alike crates in your pull requests">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="RustSecJP check — catch bad crates before you merge">
+  <meta name="twitter:description" content="GitHub Action for Cargo.lock: malicious crates, vulnerabilities and look-alike names, in one PR comment. Nothing is built or run.">
+  <meta name="twitter:image" content="https://rustsecjp.github.io/check/assets/og.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "RustSecJP check",
+    "applicationCategory": "SecurityApplication",
+    "operatingSystem": "Linux, macOS, Windows, GitHub Actions",
+    "softwareVersion": "1.0.0",
+    "license": "https://opensource.org/licenses/MIT",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "downloadUrl": "https://github.com/RustSecJP/check/releases/latest",
+    "url": "https://rustsecjp.github.io/check/"
+  }
+  </script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .brand img { border-radius: 50%; }
+    .yaml-box pre { font-size: 13px; }
+  </style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="assets/rustsecjp.png" alt="" width="30" height="30">RustSecJP check</a>
+    <nav class="nav" aria-label="Main">
+      <a href="#use-cases">Use cases</a>
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#install">Install</a>
+      <a href="#faq">FAQ</a>
+      <a class="gh" href="https://github.com/RustSecJP/check" aria-label="RustSecJP check on GitHub">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <!-- Hero -->
+  <div class="hero" id="top">
+    <div class="wrap">
+      <div class="hero-grid">
+        <div>
+          <span class="eyebrow">v1.0.0 · GitHub Action and CLI</span>
+          <h1>Catch bad crates <span class="hl">before you merge them.</span></h1>
+          <p class="lede">RustSecJP check reads your <code>Cargo.lock</code> and comments on the pull request when a dependency is malicious, has a known vulnerability, or has a name made to look like a popular crate. Nothing from your project is built or run.</p>
+
+          <div class="code yaml-box">
+            <div class="code-head"><span class="code-label">.github/workflows/rustsecjp-check.yml</span></div>
+            <pre><code><span class="k">on</span>:
+  <span class="k">pull_request</span>:
+    <span class="k">paths</span>: [<span class="s">"**/Cargo.lock"</span>, <span class="s">"**/Cargo.toml"</span>]
+<span class="k">permissions</span>:
+  <span class="k">contents</span>: read
+  <span class="k">pull-requests</span>: write
+<span class="k">jobs</span>:
+  <span class="k">check</span>:
+    <span class="k">runs-on</span>: ubuntu-latest
+    <span class="k">steps</span>:
+      - <span class="k">uses</span>: <span class="s">RustSecJP/check@v1</span></code></pre>
+            <button class="copy" type="button">Copy</button>
+          </div>
+
+          <div class="cta">
+            <a class="btn btn-primary" href="#install">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              Add to your repository
+            </a>
+            <a class="btn btn-ghost" id="download-btn" href="#download"
+               data-base="https://github.com/RustSecJP/check/releases/latest/download/" data-prefix="rustsecjp-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 19h16"/></svg>
+              <span class="label">Download CLI</span>
+            </a>
+          </div>
+          <p class="cta-note" id="download-note"><span class="detected">CLI for Linux, macOS and Windows</span> · <a href="#download">Other platforms</a> · MIT or Apache-2.0</p>
+        </div>
+        <div>
+          <div class="video-frame">
+            <video src="assets/promo.mp4" poster="assets/poster.jpg" autoplay muted loop playsinline preload="metadata"
+                   aria-label="A pull request named Bump dependencies gets a RustSecJP check comment listing one malicious crate, one vulnerable crate with its fixed version, a look-alike of serde and an unmaintained crate"></video>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><b>Malicious · Vulnerable · Look-alike</b><span>One check for removed malware crates, RUSTSEC / GHSA / CVE advisories and typosquat-like names</span></div>
+        <div class="stat"><b>Nothing built or run</b><span>No checkout, no <code>build.rs</code>, no <code>cargo</code>. <code>Cargo.lock</code> is read as data.</span></div>
+        <div class="stat"><b>One comment per PR</b><span>Updated on every push, mirrored to the job summary, and a pass/fail status you can require</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Use cases -->
+  <section id="use-cases" class="alt">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">When you'll use it</div>
+        <h2>The moments a bad crate slips in</h2>
+        <p>Supply-chain attacks on crates.io rarely arrive as a crate you chose. They come in through a bump, a transitive dependency, or a project you did not write.</p>
+      </div>
+      <div class="grid-2">
+        <article class="card scenario">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5v7M18 15.5V9a3 3 0 00-3-3h-4m0 0l2.5-2.5M11 6l2.5 2.5"/></svg></div>
+          <div class="when">Dependency bumps</div>
+          <h3>A Dependabot PR pulls in a look-alike crate</h3>
+          <p>A routine version bump adds a new transitive dependency called <code>serde-rs</code> or <code>reqwets</code>. Before anyone clicks merge, the comment names it, shows the popular crate it imitates, and flags it as a look-alike to review.</p>
+        </article>
+        <article class="card scenario">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/><path d="M12 11v4m-2-2h4"/></svg></div>
+          <div class="when">Audits</div>
+          <h3>You inherit a Rust project</h3>
+          <p>Someone hands you a repository with five workspaces and years of lockfile history. Run the CLI once: every <code>Cargo.lock</code> is checked, and you get each vulnerable, unmaintained or malicious crate with the version that fixes it.</p>
+          <div class="code single"><pre><code>rustsecjp-check --fail-on vulnerability</code></pre><button class="copy" type="button">Copy</button></div>
+        </article>
+        <article class="card scenario">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg></div>
+          <div class="when">CI policy</div>
+          <h3>Blocking merges in CI</h3>
+          <p>Make the job a required status check. With <code>fail-on: malicious</code> (or <code>vulnerability</code> for stricter projects), a pull request that adds a known-bad crate simply cannot be merged.</p>
+          <div class="code single"><pre><code>- uses: RustSecJP/check@v1
+  with:
+    fail-on: vulnerability</code></pre><button class="copy" type="button">Copy</button></div>
+        </article>
+        <article class="card scenario">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></div>
+          <div class="when">New advisories</div>
+          <h3>An advisory lands while a PR is still open</h3>
+          <p>A crate in an open pull request is reported malicious the next day. A maintainer comments <code>@rustsecjp-bot check</code> and the existing comment is refreshed with the latest data, with no new commit needed.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">Features</div>
+        <h2>What it checks</h2>
+        <p>Every crates.io dependency in every <code>Cargo.lock</code>, against public advisory data and RustSecJP's own incident records.</p>
+      </div>
+      <div class="grid-3">
+        <article class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg></div>
+          <h3>Malicious crates</h3>
+          <p>Crates removed from crates.io for containing malware (<code>MAL-*</code> and RustSec "malicious" advisories, via OSV).</p>
+        </article>
+        <article class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/></svg></div>
+          <h3>Known vulnerabilities</h3>
+          <p>RUSTSEC, GHSA and CVE advisories with the version that fixes each one, plus unmaintained and unsound notices.</p>
+        </article>
+        <article class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
+          <h3>Look-alike names</h3>
+          <p>Names one edit away from a top-1,000 crate, <code>-</code>/<code>_</code> swaps, and <code>-rs</code> or <code>-rust</code> suffixes. A hint to review, never a verdict.</p>
+        </article>
+        <article class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></div>
+          <h3>RustSecJP incident records</h3>
+          <p>Crates in campaigns tracked by RustSecJP/incidents. For hijacked legitimate crates, only the recorded bad versions are flagged.</p>
+        </article>
+        <article class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+          <h3>One comment, kept current</h3>
+          <p>A single pull-request comment that is rewritten on each push, the same report in the job summary, and a status you can make required.</p>
+        </article>
+        <article class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"/></svg></div>
+          <h3>CLI and JSON too</h3>
+          <p>The same checks run locally on any project, with <code>--format json</code> for scripts and exit codes for CI.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how" class="alt">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">How it works</div>
+        <h2>From lockfile to comment, without touching your code</h2>
+      </div>
+      <ol class="steps">
+        <li><h3>Get the binary</h3><p>Downloads the release for the runner and verifies it against <code>SHA256SUMS</code>.</p></li>
+        <li><h3>Read Cargo.lock</h3><p>Fetches the lockfile from the PR's head commit through the GitHub API. No checkout.</p></li>
+        <li><h3>Ask OSV</h3><p>Sends crate names and versions (only those) to OSV for advisories.</p></li>
+        <li><h3>Cross-check</h3><p>Matches RustSecJP incident records and compares names with popular crates.</p></li>
+        <li><h3>Report</h3><p>Writes or updates one comment, fills the job summary, and passes or fails the job.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Safety -->
+  <section id="safety">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">Safety</div>
+        <h2>Safe to run on pull requests from strangers</h2>
+        <p>Checking dependencies should not mean running them. RustSecJP check never builds or runs anything from the repository it checks.</p>
+      </div>
+      <div class="safety">
+        <ul class="checklist">
+          <li><span><b>Nothing is built or run.</b> No <code>actions/checkout</code>, no <code>cargo</code>, so a fork's <code>build.rs</code>, proc-macros or scripts never execute, even in workflows with a write token.</span></li>
+          <li><span><b>The binary is verified.</b> The release asset must match <code>SHA256SUMS</code>, or the step stops. Pin a commit SHA and only that exact build is used.</span></li>
+          <li><span><b>Only names and versions leave.</b> Source code, paths, git/path dependencies and private registry names are never sent anywhere.</span></li>
+          <li><span><b>Re-checks are gated.</b> The <code>@rustsecjp-bot check</code> command only runs for repository owners, members and collaborators.</span></li>
+        </ul>
+        <div class="note">
+          <h3>Good to know</h3>
+          <ul>
+            <li>Reports are written in Japanese. Crate names, versions, advisory IDs and links read the same in any language, and <code>--format json</code> is available for tools.</li>
+            <li>Only problems already in OSV or RustSecJP records are found; a freshly removed crate can take hours or days to get an advisory.</li>
+            <li>Look-alike names are a hint: legitimate crates can appear, and some imitations can be missed.</li>
+            <li>The code inside crates is not read, and projects without a <code>Cargo.lock</code> cannot be checked.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Install -->
+  <section id="install" class="alt">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">Install</div>
+        <h2>Add it in two minutes</h2>
+        <p>Use it as a GitHub Action, or download the CLI for your machine.</p>
+      </div>
+      <div class="install-grid">
+        <div>
+          <h3>GitHub Action</h3>
+          <p class="sub">Save this as <code>.github/workflows/rustsecjp-check.yml</code>. No Rust toolchain needed. <code>@v1</code> follows the newest 1.x release; pin <code>@v1.0.0</code> to stay put.</p>
+          <div class="code single"><pre><code>name: RustSecJP check
+on:
+  pull_request:
+    paths: ["**/Cargo.lock", "**/Cargo.toml"]
+permissions:
+  contents: read        # read Cargo.lock through the API
+  pull-requests: write  # post the result as a comment
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: RustSecJP/check@v1
+        with:
+          fail-on: malicious   # malicious | vulnerability | never</code></pre><button class="copy" type="button">Copy</button></div>
+          <p class="cta-note">Want <code>@rustsecjp-bot check</code> re-runs too? Use <a href="https://github.com/RustSecJP/check/blob/main/examples/workflow.yml">examples/workflow.yml</a>.</p>
+
+          <h3>Run it locally</h3>
+          <p class="sub">In any Rust project. Exit code 1 when <code>--fail-on</code> matches.</p>
+          <div class="code single"><pre><code>cd your-rust-project
+rustsecjp-check
+rustsecjp-check --format json --output report.json</code></pre><button class="copy" type="button">Copy</button></div>
+        </div>
+        <div id="download">
+          <h3>Download the CLI</h3>
+          <p class="sub">These links always point to the newest release. Linux builds need glibc 2.35+ (Ubuntu 22.04 and newer).</p>
+          <table class="dl-table" style="margin-top:14px">
+            <thead><tr><th>Platform</th><th>File</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr data-asset="rustsecjp-check-linux-x86_64.tar.gz"><td>Linux x86_64</td><td><a href="https://github.com/RustSecJP/check/releases/latest/download/rustsecjp-check-linux-x86_64.tar.gz">rustsecjp-check-linux-x86_64.tar.gz</a></td><td></td></tr>
+              <tr data-asset="rustsecjp-check-linux-aarch64.tar.gz"><td>Linux arm64</td><td><a href="https://github.com/RustSecJP/check/releases/latest/download/rustsecjp-check-linux-aarch64.tar.gz">rustsecjp-check-linux-aarch64.tar.gz</a></td><td></td></tr>
+              <tr data-asset="rustsecjp-check-macos-aarch64.tar.gz"><td>macOS Apple silicon</td><td><a href="https://github.com/RustSecJP/check/releases/latest/download/rustsecjp-check-macos-aarch64.tar.gz">rustsecjp-check-macos-aarch64.tar.gz</a></td><td>M1 and later</td></tr>
+              <tr data-asset="rustsecjp-check-macos-x86_64.tar.gz"><td>macOS Intel</td><td><a href="https://github.com/RustSecJP/check/releases/latest/download/rustsecjp-check-macos-x86_64.tar.gz">rustsecjp-check-macos-x86_64.tar.gz</a></td><td></td></tr>
+              <tr data-asset="rustsecjp-check-windows-x86_64.zip"><td>Windows x86_64</td><td><a href="https://github.com/RustSecJP/check/releases/latest/download/rustsecjp-check-windows-x86_64.zip">rustsecjp-check-windows-x86_64.zip</a></td><td></td></tr>
+              <tr><td>Checksums</td><td><a href="https://github.com/RustSecJP/check/releases/latest/download/SHA256SUMS">SHA256SUMS</a></td><td>SHA-256</td></tr>
+            </tbody>
+          </table>
+          <h3>Verify, or build with Cargo</h3>
+          <p class="sub">Check the download first (<code>shasum -a 256</code> on macOS). Building needs Rust 1.88+.</p>
+          <div class="code single"><pre><code>sha256sum --check --ignore-missing SHA256SUMS
+cargo install --locked --git https://github.com/RustSecJP/check</code></pre><button class="copy" type="button">Copy</button></div>
+          <p class="cta-note">All versions: <a href="https://github.com/RustSecJP/check/releases">GitHub Releases</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">FAQ</div>
+        <h2>Questions</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>Why does it not check out my code?</summary>
+          <p>It does not need to. <code>Cargo.lock</code> already lists every crate and version, and reading it through the GitHub API means untrusted code from a fork never lands on the runner.</p>
+        </details>
+        <details>
+          <summary>How is this different from cargo audit or cargo deny?</summary>
+          <p>It uses the same kind of advisory data (through OSV) and adds RustSecJP's incident records and look-alike name hints. It is designed around one pull-request comment that stays up to date, and it never needs your project to compile.</p>
+        </details>
+        <details>
+          <summary>Will it comment on pull requests from forks?</summary>
+          <p>On <code>pull_request</code>, GitHub gives fork PRs a read-only token, so the comment may not be posted; the result is still in the job summary. A maintainer can comment <code>@rustsecjp-bot check</code> to post it (see <code>examples/workflow.yml</code>).</p>
+        </details>
+        <details>
+          <summary>Does a look-alike warning mean the crate is malicious?</summary>
+          <p>No. It means the name is close to a popular crate, which is how typosquatting works. Check that it is the crate you meant to depend on. Legitimate look-alikes among the next 4,000 most-downloaded crates are allow-listed to keep the noise down.</p>
+        </details>
+        <details>
+          <summary>What data leaves my repository?</summary>
+          <p>Only names and versions of crates.io dependencies, sent to OSV. RustSecJP/incidents and crates.io are only downloaded from. In Actions, the GitHub API is used to read the lockfile and write the comment.</p>
+        </details>
+        <details>
+          <summary>Why is the report in Japanese?</summary>
+          <p>RustSecJP is a Japanese-speaking community and the tool started there. Everything you need to act on (crate, version, advisory ID, fixed version, links) is language-neutral, and <code>--format json</code> gives a machine-readable report.</p>
+        </details>
+        <details>
+          <summary>Is it free?</summary>
+          <p>Yes. It is open source under MIT or Apache-2.0, at your option, and uses only the GitHub runner and <code>GITHUB_TOKEN</code>: no external service or secret is required.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="#top"><img src="assets/rustsecjp.png" alt="" width="30" height="30">RustSecJP check</a>
+        <p style="margin-top:10px">v1.0.0 · MIT OR Apache-2.0</p>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/RustSecJP/check">GitHub</a>
+        <a href="https://github.com/RustSecJP/check/releases">Releases</a>
+        <a href="https://github.com/RustSecJP/check/issues">Issues</a>
+        <a href="https://github.com/RustSecJP">RustSecJP</a>
+        <a href="https://hina-kura49.github.io/portfolio/">Author's portfolio</a>
+      </div>
+    </div>
+    <p class="disclaimer">RustSecJP is an unofficial community, not affiliated with the Rust Project or Rust Foundation. Rust and Cargo are trademarks of the Rust Foundation.</p>
+  </div>
+</footer>
+
+<script src="main.js" defer></script>
+</body>
+</html>

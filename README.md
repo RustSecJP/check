@@ -1,200 +1,207 @@
+<div align="center">
+
+<img src="site/assets/rustsecjp.png" width="88" height="88" alt="RustSecJP logo">
+
 # RustSecJP check
 
-Rust のプロジェクトの `Cargo.lock` を読んで、依存している crate に問題が無いかを確かめる小さな道具です。
-GitHub Action として使うと、結果をプルリクエストにコメントします。
-RustSecJP（Rust のセキュリティについての、非公式の日本語のコミュニティ）が作っています。
-道具そのものも Rust で書いています。
+**Catch malicious, vulnerable and look-alike crates in a pull request, before you merge it.**
 
-`Cargo.lock` はデータとして読むだけです。確かめるプロジェクトのビルドや、コードの実行はしません。
+[![CI](https://github.com/RustSecJP/check/actions/workflows/ci.yml/badge.svg)](https://github.com/RustSecJP/check/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/RustSecJP/check?sort=semver)](https://github.com/RustSecJP/check/releases)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
 
-## 何を確かめるか
+**[Product page](https://rustsecjp.github.io/check/)** · [GitHub Action](#github-action) · [Download](#download) · English · [日本語](README.ja.md)
 
-| 種類 | 内容 | データ |
-|---|---|---|
-| 悪性 | 悪性のコードを含むとして削除された crate（`MAL-*` や、RustSec の malicious） | [OSV](https://osv.dev) |
-| 脆弱性 | 既知の脆弱性。RUSTSEC / GHSA / CVE の番号と、直った版を出します | OSV |
-| 情報 | 保守終了（unmaintained）や unsound の知らせ | OSV |
-| 名前の注意 | よく使われる crate に名前が似ている crate | 同梱の一覧（`data/popular-crates.txt`） |
-| RustSecJP の記録 | [RustSecJP/incidents](https://rustsecjp.github.io/incidents/) のキャンペーン記録に載っている crate | RustSecJP/incidents |
+</div>
 
-- RUSTSEC の助言に日本語版のページがあれば、そのリンクも付けます。
-- RustSecJP の記録で「乗っ取られた正規の crate」（`role = "hijacked"`）は、記録にある悪性の版だけを「悪性」とします。
-  記録の版の書き方から判断できないときは「要確認」とします。
-- 名前の注意は、名前が似ているだけで、悪性とは限りません。次のどれかに当たる名前を出します。
-  - よく使われる名前（5 文字以上）と、1 文字だけ違う（追加・削除・置き換え・隣り合う 2 文字の入れ替え）。番号だけの違い（`sha1` / `sha2` など）は除きます
-  - `-` と `_` の違いだけ
-  - よく使われる名前に `-rs` / `-rust` / `_rs` / `_rust` / `-rst` を付けた形
-- crates.io から来る crate だけを確かめます。git や path の依存、crates.io 以外のレジストリの crate は「確かめなかった依存」として一覧にします。
+RustSecJP check reads your `Cargo.lock` and tells you, in a comment on the pull request, if a dependency is:
 
-## 入れ方
+- **malicious**: a crate removed from crates.io for containing malware, or a hijacked release listed in [RustSecJP/incidents](https://rustsecjp.github.io/incidents/),
+- **vulnerable**: a known advisory (RUSTSEC / GHSA / CVE), with the version that fixes it,
+- **unmaintained or unsound**: informational advisories,
+- **a look-alike name**: one character away from a popular crate, `-rs` added, `-` swapped for `_` (a hint, not a verdict).
 
-どれか 1 つを選んでください。
+`Cargo.lock` is read as data only. **Nothing from your project is built or run**: no `build.rs`, no proc-macros, no `cargo` at all.
 
-### crates.io から
+> The report is written in Japanese (RustSecJP is a Japanese-speaking community). Crate names, versions, advisory IDs and links read the same in any language, and `--format json` gives a machine-readable report.
 
-Rust 1.88 以上が要ります。
+## GitHub Action
 
-```sh
-cargo install --locked rustsecjp-check
+Add `.github/workflows/rustsecjp-check.yml` to your repository:
+
+```yaml
+name: RustSecJP check
+on:
+  pull_request:
+    paths: ["**/Cargo.lock", "**/Cargo.toml"]
+permissions:
+  contents: read        # read Cargo.lock through the API
+  pull-requests: write  # post the result as a comment
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: RustSecJP/check@v1
+        with:
+          fail-on: malicious   # malicious | vulnerability | never
 ```
 
-### Releases から
+That is all. No `actions/checkout` and no Rust toolchain are needed. On every pull request that touches a lockfile, the action:
 
-[Releases](https://github.com/RustSecJP/check/releases) に、次の 5 つのバイナリがあります。
+1. downloads the release binary for the runner and checks it against `SHA256SUMS`,
+2. reads `Cargo.lock` from the pull request's head commit through the GitHub API,
+3. posts **one** comment and updates it on later pushes, and writes the same report to the job summary,
+4. fails the job if `fail-on` matches, so you can make it a required check.
 
-| OS | ファイル |
+`@v1` always runs the newest 1.x release. Pin `@v1.0.0` (or a commit SHA) to stay on one version.
+[`examples/workflow.yml`](examples/workflow.yml) is a fuller example that also re-runs the check when a maintainer comments `@rustsecjp-bot check`.
+
+| Input | Default | Meaning |
+|---|---|---|
+| `fail-on` | `malicious` | When to fail the job: `malicious`, `vulnerability` (malicious or vulnerable), or `never` |
+| `lockfiles` | (all) | `Cargo.lock` paths or globs, separated by spaces or newlines. Empty means every `Cargo.lock` outside `target/` |
+| `comment` | `true` | Post the result on the pull request |
+| `token` | `${{ github.token }}` | Token for the comment and the API |
+| `source` | `auto` | How to read `Cargo.lock`: `auto` (API for pull requests, working directory otherwise), `api`, or `workspace` |
+| `working-directory` | `.` | Where to look when `source` is `workspace` |
+
+Outputs: `result` (`ok`, `fail`, `error` or `skipped`) and `report` (path to the Markdown report).
+
+## When you'll use it
+
+- **A Dependabot or Renovate pull request pulls in a look-alike crate.** A version bump brings a new transitive dependency named `reqwets` or `tokio-rs`. The comment points at it, and at the popular crate it resembles, before anyone clicks merge.
+- **You inherit a Rust project.** Run `rustsecjp-check` once in the repository. In a few seconds you get every vulnerable, unmaintained or malicious crate in every `Cargo.lock`, with the fixed version for each.
+- **You want to block merges in CI.** Make the job a required status check with `fail-on: malicious` (or `vulnerability` for stricter projects). A pull request that adds a known-bad crate cannot be merged.
+- **A new advisory comes out after a pull request was opened.** A maintainer comments `@rustsecjp-bot check` and the comment is refreshed with the latest data, without pushing a new commit.
+
+## Download
+
+To run it on your own machine, pick the file for your computer. These links always point to the newest release.
+
+| OS | File |
 |---|---|
-| Linux（x86_64） | `rustsecjp-check-x86_64-unknown-linux-gnu.tar.gz` |
-| Linux（arm64） | `rustsecjp-check-aarch64-unknown-linux-gnu.tar.gz` |
-| macOS（Intel） | `rustsecjp-check-x86_64-apple-darwin.tar.gz` |
-| macOS（Apple シリコン） | `rustsecjp-check-aarch64-apple-darwin.tar.gz` |
-| Windows（x86_64） | `rustsecjp-check-x86_64-pc-windows-msvc.zip` |
+| Linux (x86_64) | [`rustsecjp-check-linux-x86_64.tar.gz`](https://github.com/RustSecJP/check/releases/latest/download/rustsecjp-check-linux-x86_64.tar.gz) |
+| Linux (arm64) | [`rustsecjp-check-linux-aarch64.tar.gz`](https://github.com/RustSecJP/check/releases/latest/download/rustsecjp-check-linux-aarch64.tar.gz) |
+| macOS (Apple silicon) | [`rustsecjp-check-macos-aarch64.tar.gz`](https://github.com/RustSecJP/check/releases/latest/download/rustsecjp-check-macos-aarch64.tar.gz) |
+| macOS (Intel) | [`rustsecjp-check-macos-x86_64.tar.gz`](https://github.com/RustSecJP/check/releases/latest/download/rustsecjp-check-macos-x86_64.tar.gz) |
+| Windows (x86_64) | [`rustsecjp-check-windows-x86_64.zip`](https://github.com/RustSecJP/check/releases/latest/download/rustsecjp-check-windows-x86_64.zip) |
+| Checksums | [`SHA256SUMS`](https://github.com/RustSecJP/check/releases/latest/download/SHA256SUMS) |
 
-取ってきたファイルは、同じ Release の `SHA256SUMS` と照らし合わせてから使ってください。
+Check the file against `SHA256SUMS` before you use it:
 
 ```sh
 sha256sum --check --ignore-missing SHA256SUMS
+# macOS: shasum -a 256 --check --ignore-missing SHA256SUMS
 ```
 
-Linux のバイナリは Ubuntu 22.04 でビルドしているので、glibc 2.35 以上で動きます。
+The Linux binaries need glibc 2.35 or later (Ubuntu 22.04 and newer).
+With Rust 1.88 or later you can also build it yourself:
 
-### GitHub Action として
-
-[`examples/workflow.yml`](examples/workflow.yml) を、自分のリポジトリの `.github/workflows/rustsecjp-check.yml` にコピーしてください。
-
-```yaml
-- uses: RustSecJP/check@v0
-  with:
-    fail-on: malicious   # malicious / vulnerability / never
+```sh
+cargo install --locked --git https://github.com/RustSecJP/check
 ```
 
-action は、runner に合うバイナリを RustSecJP/check の Release から取ってきて、`SHA256SUMS` と照らし合わせてから動かします。
+## Usage
 
-- どの Release を使うかは、`uses:` に書いた ref で決まります。`@v0.1.0` ならその Release、`@v0` や `@v0.1` ならそれに当たる一番新しい Release です。当たる Release が無ければ、一番新しい Release を使います。
-- コミットの SHA で固定した（`@<40 桁の SHA>`）ときは、その SHA を指すタグの Release だけを使います。無ければ、その SHA のソースからビルドします。固定したものと違う版のバイナリが動くことはありません。
-- `SHA256SUMS` と合わないときは、そこで止めます。
-- Release が無いとき（ブランチや `uses: ./` から動かしたときなど）や、バイナリが動かないときは、action のソースから `cargo install --locked` でビルドします。GitHub の runner には Rust が入っているので、そのまま動きます。
-
-入力の一覧です。
-
-| 入力 | 既定 | 内容 |
-|---|---|---|
-| `lockfiles` | （空） | 確かめる `Cargo.lock`。パスかグロブを空白や改行で区切って書きます。空なら全部を探します（`target/` は除きます） |
-| `fail-on` | `malicious` | どの結果でジョブを失敗にするか。`malicious`（悪性）/ `vulnerability`（悪性か脆弱性）/ `never` |
-| `comment` | `true` | プルリクエストのときに結果をコメントするか |
-| `token` | `${{ github.token }}` | コメントと API に使うトークン |
-| `source` | `auto` | `Cargo.lock` の読み方。`auto` はプルリクエストなら API、それ以外は作業ディレクトリ |
-| `working-directory` | `.` | `source` が作業ディレクトリのときに探し始める場所 |
-
-出力は `result`（`ok` / `fail` / `error` / `skipped`）と `report`（Markdown の報告のファイルのパス）です。
-
-結果は、ジョブの要約（`$GITHUB_STEP_SUMMARY`）にも書きます。
-コメントは 1 つのプルリクエストに 1 つだけで、もう一度確かめると同じコメントを書き換えます（目印は `<!-- rustsecjp-check -->`）。
-
-#### rustsecjp-bot の名前でコメントする
-
-RustSecJP のリポジトリでは、`token` に rustsecjp-bot のトークンを渡しています。そうすると、コメントは rustsecjp-bot の名前で出ます。
-ほかのリポジトリでは `token` を省略してかまいません。その場合は `github-actions[bot]` の名前で出ます。
-
-## 使い方（手元で）
-
-確かめたいプロジェクトのディレクトリで動かします。
+Run it in the project you want to check:
 
 ```sh
 cd your-rust-project
-rustsecjp-check
-```
-
-| オプション | 内容 |
-|---|---|
-| `--lockfile PATH` | 確かめる `Cargo.lock`（何度でも指定可。グロブも可。ディレクトリなら、その下を探します）。省略すると、今のディレクトリの下をすべて探します |
-| `--incidents-dir DIR` | RustSecJP/incidents の手元のコピーを使います（ネットワークを使わずに試すとき） |
-| `--format markdown\|json` | 出力の形 |
-| `--fail-on malicious\|vulnerability\|never` | 終了コードを 1 にする条件 |
-| `--output FILE` | 報告をファイルに書きます（省略すると標準出力） |
-| `--no-osv` / `--no-incidents` / `--no-typo` | それぞれの確認をしない |
-
-例:
-
-```sh
-rustsecjp-check --lockfile '**/Cargo.lock' --fail-on vulnerability
+rustsecjp-check                                    # every Cargo.lock below here
+rustsecjp-check --fail-on vulnerability            # exit 1 on malicious or vulnerable crates
 rustsecjp-check --format json --output report.json
 ```
 
-終了コード: `0` 問題なし（または `fail-on` に当たらない）、`1` `fail-on` に当たった、`2` 確認を最後まで終えられなかった（ネットワークの失敗など）か、オプションの誤り。
+| Option | Meaning |
+|---|---|
+| `--lockfile PATH` | `Cargo.lock` to check. Repeatable; globs and directories work. Default: every `Cargo.lock` below the current directory |
+| `--format markdown\|json` | Report format |
+| `--fail-on malicious\|vulnerability\|never` | When to exit with code 1 |
+| `--output FILE` | Write the report to a file instead of stdout |
+| `--no-osv` / `--no-incidents` / `--no-typo` | Skip one of the checks |
+| `--incidents-dir DIR` | Use a local copy of RustSecJP/incidents (for offline tests) |
 
-`rustsecjp-check action` は GitHub Action から呼ぶためのものです。設定は `INPUT_*` と `GITHUB_*` の環境変数で受け取ります。
+Exit codes: `0` nothing matched `--fail-on`, `1` `--fail-on` matched, `2` the check could not finish (for example a network error) or the options were wrong.
 
-## `@rustsecjp-bot check` で確かめ直す
+## What it checks
 
-プルリクエストに `@rustsecjp-bot check` とコメントすると、もう一度確かめます。
-新しい助言が出たあとに、マージ前のプルリクエストを確かめ直したいときに使います。
+| Kind | What | Data |
+|---|---|---|
+| Malicious | Crates removed for containing malicious code (`MAL-*`, RustSec "malicious") | [OSV](https://osv.dev) |
+| Vulnerability | Known vulnerabilities, with RUSTSEC / GHSA / CVE IDs and the fixed versions | OSV |
+| Informational | Unmaintained and unsound notices | OSV |
+| Look-alike name | Names close to a popular crate | Built-in list (`data/popular-crates.txt`) |
+| RustSecJP records | Crates in a campaign recorded in [RustSecJP/incidents](https://rustsecjp.github.io/incidents/) | RustSecJP/incidents |
 
-- 動くのは、コメントした人がリポジトリの OWNER / MEMBER / COLLABORATOR のときだけです。だれでも動かせると、悪用されるおそれがあるためです。
-- 受け付けると、コメントに 👀 を付けます。終わると、問題が無ければ 👍、あれば 👎 を付けます（GitHub の反応には ✅ / ❌ が無いため）。トークンに権限が無いときは、反応は付きません。
-- 結果は、いつものコメントを書き換えて知らせます。
+- When a RUSTSEC advisory has a Japanese translation, the report links to it.
+- For a **hijacked** legitimate crate (`role = "hijacked"` in the record), only the versions in the record are malicious. When the record does not say clearly, the result is "needs review".
+- A look-alike name is only a hint. It is reported when the name is one edit away from a popular name of 5+ characters (add, remove, replace, or swap two neighbours; number-only changes such as `sha1`/`sha2` are ignored), differs only in `-` vs `_`, or adds `-rs`, `-rust`, `_rs`, `_rust` or `-rst`.
+- Only crates from crates.io are checked. git and path dependencies, and crates from other registries, are listed as "not checked".
 
-### フォークからのプルリクエストでも安全な理由
+## Safety and privacy
 
-この action は、プルリクエストのコードを取り出しません（`actions/checkout` を使いません）。
-プルリクエストの先頭のコミットにある `Cargo.lock` だけを、GitHub の API（`GET /repos/{owner}/{repo}/contents/...?ref=<コミット>`）でデータとして読みます。
-そのため、フォークの `build.rs` やスクリプトが動くことはありません。
-`issue_comment` のワークフローはトークンに書き込みの権限があるので、この点が大事です。`pull_request_target` と `actions/checkout` を組み合わせて、フォークのコードを取り出すことはしないでください。
+- **Nothing is built or run.** `Cargo.lock` is parsed as text. In a pull request it is fetched from the head commit through the GitHub API (`GET /repos/{owner}/{repo}/contents/...?ref=<sha>`), so a fork's `build.rs` or scripts never execute, even in `issue_comment` workflows that have a write token. Do not combine `pull_request_target` with `actions/checkout` of the fork.
+- **The binary is verified.** The action uses the release that matches its own ref and checks it against `SHA256SUMS`; it stops if they differ. When pinned to a commit SHA, it only uses the release tagged at that SHA, or builds that exact source. When it has to build, it builds only the action's own code, in the action's directory, so your `.cargo/config.toml` and `rust-toolchain.toml` are not read.
+- **Only names and versions leave your machine.** Crate names and versions from crates.io are sent to OSV. Source code, file paths, git/path dependencies and private registry names are never sent. RustSecJP/incidents and crates.io are only downloaded from.
+- **The `@rustsecjp-bot check` command** only runs for OWNER, MEMBER or COLLABORATOR comments, so strangers cannot trigger it.
 
-action がソースからビルドするときも、ビルドするのは action（RustSecJP/check）のコードだけです。確かめるリポジトリの `.cargo/config.toml` や `rust-toolchain.toml` を読まないよう、action のディレクトリでビルドします。
+## Limitations
 
-`pull_request` で動いたとき、フォークからのプルリクエストではトークンが読み取り専用になり、コメントを書けないことがあります。
-その場合も結果はジョブの要約に残ります。コメントが欲しいときは、メンテナーが `@rustsecjp-bot check` とコメントしてください。
+- Problems that are not in OSV yet are not found. A freshly removed malicious crate can take hours to days to get an advisory.
+- Decisions are based on version numbers. Two different files published under the same version cannot be told apart (RustSecJP records mark such cases as "needs review").
+- Look-alike names are a rough hint. Legitimate crates can show up, and look-alikes can be missed.
+- Projects without a `Cargo.lock` cannot be checked.
+- The code of the crates is not read: `build.rs` and proc-macro contents are not inspected.
 
-## 使うデータ
+## FAQ
 
-- **OSV**（`https://api.osv.dev/v1/querybatch` と `/v1/vulns/{id}`）: RustSec、GitHub Advisory Database、OpenSSF Malicious Packages の助言をまとめたものです。
-- **RustSecJP/incidents**: `https://codeload.github.com/RustSecJP/incidents/tar.gz/refs/heads/main` を毎回取ってきて、メモリの上で読みます（ディスクへは展開しません）。`campaigns/*/campaign.toml` と `advisories/RUSTSEC-*.md` の名前だけを使います。
-- **よく使われる crate の一覧**: crates.io のダウンロード数の上位 1000 件です。バイナリに埋め込んでいます。`cargo run --example update-popular` で作り直せます。誤検知を減らすため、その次の 4000 件のうち名前が似ているものは `data/typo-allowlist.txt` に入れて、注意を出しません。
+<details>
+<summary><b>Why does it not check out my code?</b></summary>
 
-通信は https だけを使います。大きすぎる応答（64 MiB より大きいもの）は読みません。
+It does not need to. `Cargo.lock` lists every crate and version, and reading it through the API means untrusted code from a fork never touches the runner.
+</details>
 
-## できないこと
+<details>
+<summary><b>Will it comment on pull requests from forks?</b></summary>
 
-- OSV に載っていない問題は見つけられません。削除されたばかりの悪性の crate は、助言が出るまで数時間から数日かかることがあります。
-- 版番号だけで判断します。同じ版番号で中身が違う場合（出し直された版など）は区別できません。RustSecJP の記録では、そうした場合を「要確認」にしています。
-- 名前の注意は、ただの目安です。正規の crate が出ることも、名前を似せた crate を見落とすこともあります。
-- `Cargo.lock` が無いプロジェクト（ライブラリなど）は確かめられません。
-- crate のコードは読みません。build.rs や proc-macro の中身は確かめません。
+On `pull_request`, GitHub gives fork pull requests a read-only token, so the comment may not be posted. The result is still in the job summary. A maintainer can comment `@rustsecjp-bot check` to post it (see `examples/workflow.yml`).
+</details>
 
-## プライバシー
+<details>
+<summary><b>Who posts the comment?</b></summary>
 
-外へ送るのは、crates.io から来る crate の名前と版番号だけです（OSV へ）。
-ソースコード、ファイルのパス、git や path の依存、crates.io 以外のレジストリの crate の名前は送りません。
-RustSecJP/incidents と crates.io からは、データを取ってくるだけです。
-GitHub Action として動くときは、そのほかにプルリクエストの `Cargo.lock` を読み、コメントを書くために GitHub の API を使います。
+`github-actions[bot]`, using `${{ github.token }}`. RustSecJP's own repositories pass the rustsecjp-bot token in `token`, so the comments show up under that name.
+</details>
 
-## 開発
+<details>
+<summary><b>How is this different from <code>cargo audit</code> or <code>cargo deny</code>?</b></summary>
+
+It uses the same kind of advisory data (through OSV) and adds RustSecJP's incident records and look-alike name hints. It is built around one pull-request comment that stays up to date, and it never needs your project to build.
+</details>
+
+## For developers
 
 ```sh
-cargo test                                  # ネットワークを使いません
+cargo test                                  # no network needed
 cargo clippy --all-targets -- -D warnings
 cargo fmt --check
 cargo deny check
 ```
 
-`tests/golden/` には、もとの Python 版（v0.1.0）が同じ試験用のデータで出した報告が入っています。Rust 版の報告が 1 文字ずつ同じであることを確かめています。
+- `tests/golden/` holds the reports that the original Python version (v0.1.0) produced on the same test data. The Rust version must match them byte for byte, apart from the timestamp and the tool version.
+- The list of popular crates is the top 1,000 crates.io crates by downloads, embedded in the binary. Rebuild it with `cargo run --example update-popular`. To reduce false positives, look-alike names among the next 4,000 are in `data/typo-allowlist.txt`.
+- Data sources: OSV (`https://api.osv.dev/v1/querybatch` and `/v1/vulns/{id}`), and RustSecJP/incidents (downloaded from `codeload.github.com` on each run and read in memory; only names in `campaigns/*/campaign.toml` and `advisories/RUSTSEC-*.md` are used). HTTPS only; responses over 64 MiB are refused.
+- `rustsecjp-check action` is the entry point for the GitHub Action. It reads its settings from `INPUT_*` and `GITHUB_*` environment variables.
+- Releases: push a `vX.Y.Z` tag that matches `Cargo.toml`. The release workflow builds five binaries, publishes them with `SHA256SUMS`, and moves the major tag (`v1`).
+- The product page lives in `site/` and is deployed to GitHub Pages by `.github/workflows/pages.yml`.
 
-## ライセンス
+## About RustSecJP
 
-MIT または Apache-2.0 のどちらかを選べます（[LICENSE-MIT](LICENSE-MIT)、[LICENSE-APACHE](LICENSE-APACHE)）。
+[RustSecJP](https://github.com/RustSecJP) is an unofficial, Japanese-speaking community about Rust security. RustSecJP is not affiliated with the Rust Project or the Rust Foundation.
+
+## License
+
+Licensed under either of the MIT License ([LICENSE-MIT](LICENSE-MIT)) or the Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE)), at your option.
 Copyright (c) 2026 RustSecJP contributors
 
-誤りや改善の提案は、[issues](https://github.com/RustSecJP/check/issues) へお願いします。
-
----
-
-## English summary
-
-RustSecJP check is a small tool written in Rust. It reads `Cargo.lock` files (as data only; nothing from the scanned project is built or run) and reports, in Japanese, known malicious crates, vulnerabilities and informational advisories from OSV, crates listed in RustSecJP campaign records, and names that look like typosquats of popular crates (a hint only).
-
-- Install with `cargo install --locked rustsecjp-check` (Rust 1.88+), or download a binary from Releases and verify it against `SHA256SUMS`.
-- Use it as a GitHub Action (copy `examples/workflow.yml`). The action downloads the release binary matching its own ref, verifies the checksum, and falls back to building from source when no release exists. It posts one PR comment that it keeps updated.
-- Maintainers (OWNER / MEMBER / COLLABORATOR) can re-run it by commenting `@rustsecjp-bot check`; PR `Cargo.lock` files are read via the GitHub API, so fork code is never checked out or executed.
-- Only crate names and versions from crates.io are sent to OSV. Exit codes: 0 ok, 1 `--fail-on` matched, 2 incomplete check.
-- Dual-licensed under MIT or Apache-2.0.
+Bug reports and ideas are welcome in [issues](https://github.com/RustSecJP/check/issues).

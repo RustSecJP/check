@@ -1,6 +1,7 @@
 //! もとの Python 版（v0.1.0）が同じ偽の応答で出した報告（tests/golden/）と、1 文字ずつ同じかを確かめます。
 //!
 //! 確認した時刻だけは、比べる前に消します。
+//! この道具の版番号は、Python 版の 0.1.0 から今の版に置き換えてから比べます。
 
 mod common;
 
@@ -25,6 +26,21 @@ fn strip_time(s: &str) -> String {
     out
 }
 
+/// 報告の中のこの道具の版番号（Python 版の 0.1.0）を、今の版に置き換えます。
+/// crate の版番号（依存の一覧の "version"）は置き換えません。
+fn with_current_version(s: &str) -> String {
+    let v = env!("CARGO_PKG_VERSION");
+    let mut out = s.replace("rustsecjp-check 0.1.0", &format!("rustsecjp-check {v}"));
+    // JSON の先頭（"tool" のすぐ後ろ）にある版番号だけを置き換えます
+    let old = "\"version\": \"0.1.0\"";
+    if let Some(i) = out.find(old)
+        && out[..i].matches('{').count() == 1
+    {
+        out.replace_range(i..i + old.len(), &format!("\"version\": \"{v}\""));
+    }
+    out
+}
+
 #[test]
 fn same_output_as_python() {
     let cases: Value =
@@ -39,7 +55,7 @@ fn same_output_as_python() {
             ..Default::default()
         };
         let (code, out) = run_cli(&args, &f, Some(&locks()));
-        let want = std::fs::read_to_string(golden_dir().join(fname)).unwrap();
+        let want = with_current_version(&std::fs::read_to_string(golden_dir().join(fname)).unwrap());
         assert_eq!(strip_time(&out), strip_time(&want), "{fname}");
         assert_eq!(i64::from(code), case["code"].as_i64().unwrap(), "{fname}");
         n += 1;
